@@ -92,15 +92,6 @@ Built as part of my job search as a recent BCIS graduate from AUT (Auckland Univ
 - Data management with vanilla JavaScript
 - Document processing and text extraction
 
----
-
-## Screenshots
-
-> Coming soon
-
----
-
-## License
 
 This project is open source and available under the [MIT License](LICENSE).
 

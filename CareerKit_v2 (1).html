@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CareerKit — AI Job Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0e0e0e;--ink2:#3a3a3a;--ink3:#888;--ink4:#bbb;
+  --paper:#faf9f7;--surface:#f3f1ed;--surface2:#ebe8e2;
+  --accent:#c84b2f;--accent3:#f5ede4;
+  --green:#2d6a4f;--green-light:#d8f3dc;
+  --blue:#1a4d8f;--blue-light:#dbeafe;
+  --border:rgba(14,14,14,0.1);--border2:rgba(14,14,14,0.06);
+  --r:10px;--r2:16px;
+  --sans:'Instrument Sans',sans-serif;
+  --serif:'DM Serif Display',serif;
+  --mono:'DM Mono',monospace;
+}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6;}
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+.sidebar{background:var(--ink);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.main{display:flex;flex-direction:column;}
+.sb-logo{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.sb-logo h1{font-family:var(--serif);font-size:20px;color:#fff;font-weight:400;}
+.sb-logo p{font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px;font-family:var(--mono);}
+.sb-user{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;}
+.sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;}
+.sb-user-info{flex:1;min-width:0;}
+.sb-username{font-size:12px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-email{font-size:10px;color:rgba(255,255,255,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-logout{background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:11px;padding:2px 4px;flex-shrink:0;}
+.sb-logout:hover{color:#fff;}
+.sb-nav{padding:12px 8px;flex:1;}
+.sb-section{font-size:9px;font-family:var(--mono);color:rgba(255,255,255,0.25);letter-spacing:1.5px;text-transform:uppercase;padding:10px 10px 4px;}
+.sb-btn{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:none;color:rgba(255,255,255,0.65);font-family:var(--sans);font-size:13px;border-radius:var(--r);cursor:pointer;text-align:left;transition:all 0.15s;}
+.sb-btn:hover{background:rgba(255,255,255,0.08);color:#fff;}
+.sb-btn.active{background:var(--accent);color:#fff;}
+.sb-btn svg{width:16px;height:16px;flex-shrink:0;opacity:0.7;}
+.sb-btn.active svg{opacity:1;}
+.panel{display:none;flex:1;padding:28px 32px;flex-direction:column;gap:20px;}
+.panel.active{display:flex;}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;}
+.ph h2{font-family:var(--serif);font-size:26px;font-weight:400;}
+.ph p{font-size:13px;color:var(--ink3);margin-top:2px;}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:22px;}
+.card h3{font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.5px;font-family:var(--mono);}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;font-weight:500;color:var(--ink3);margin-bottom:5px;font-family:var(--mono);letter-spacing:0.5px;text-transform:uppercase;}
+.field input,.field textarea,.field select{width:100%;padding:9px 13px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);font-size:13px;color:var(--ink);background:#fff;transition:border 0.15s;resize:vertical;}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--accent);}
+.field textarea{min-height:100px;}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--r);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border:1px solid transparent;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#b03f25;}
+.btn-primary:disabled{background:var(--ink4);cursor:not-allowed;}
+.btn-ghost{background:none;color:var(--ink2);border-color:var(--border);}
+.btn-ghost:hover{background:var(--surface);}
+.btn-full{width:100%;justify-content:center;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.kpi{background:var(--surface);border-radius:var(--r);padding:14px;text-align:center;}
+.kpi-label{font-size:10px;color:var(--ink3);font-family:var(--mono);margin-bottom:4px;}
+.kpi-val{font-size:24px;font-weight:500;}
+.output-box{background:var(--surface);border-radius:var(--r);padding:18px;font-size:13px;line-height:1.8;white-space:pre-wrap;min-height:120px;color:var(--ink2);}
+.output-box.muted{color:var(--ink3);font-style:italic;}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;font-family:var(--mono);}
+.pill-blue{background:var(--blue-light);color:var(--blue);}
+.pill-green{background:var(--green-light);color:var(--green);}
+.pill-red{background:#fee2e2;color:#991b1b;}
+.pill-yellow{background:#fef3c7;color:#92400e;}
+.pill-purple{background:#ede9fe;color:#5b21b6;}
+.pill-grey{background:#f3f4f6;color:#374151;}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px;}
+table.tbl th{text-align:left;padding:9px 12px;font-size:10px;font-family:var(--mono);letter-spacing:0.5px;color:var(--ink3);border-bottom:2px solid var(--surface2);background:var(--surface);}
+table.tbl td{padding:9px 12px;border-bottom:1px solid var(--border2);vertical-align:middle;}
+table.tbl tr:hover td{background:var(--surface);}
+.note-card{background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:18px;position:relative;}
+.note-card h4{font-size:14px;font-weight:600;margin-bottom:4px;}
+.note-card p{font-size:13px;color:var(--ink2);line-height:1.6;white-space:pre-wrap;}
+.note-card .note-meta{font-size:11px;color:var(--ink4);font-family:var(--mono);margin-bottom:8px;}
+.note-del{position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--ink4);font-size:15px;}
+.note-del:hover{color:var(--accent);}
+.job-card{background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:12px;}
+.job-card h4{font-size:15px;font-weight:600;margin-bottom:4px;}
+.job-card .jc-co{font-size:13px;color:var(--ink3);margin-bottom:8px;}
+.job-card .jc-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.job-card .jc-desc{font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:12px;}
+.job-card .jc-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.iq-card{background:var(--surface);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;}
+.iq-q{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;}
+.iq-a{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;min-height:70px;resize:vertical;background:#fff;}
+.iq-a:focus{outline:none;border-color:var(--accent);}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}
+.spinner-dark{border-color:rgba(0,0,0,0.15);border-top-color:var(--ink3);}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--ink);color:#fff;padding:10px 18px;border-radius:var(--r);font-size:13px;opacity:0;transform:translateY(6px);transition:all 0.2s;pointer-events:none;z-index:9999;}
+.toast.show{opacity:1;transform:translateY(0);}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:4px;}
+
+/* AUTH SCREEN */
+#auth-screen{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:1000;}
+.auth-box{background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:40px;width:100%;max-width:420px;}
+.auth-box h1{font-family:var(--serif);font-size:28px;font-weight:400;margin-bottom:4px;}
+.auth-box .tagline{font-size:13px;color:var(--ink3);margin-bottom:28px;}
+.auth-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.auth-tab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;background:none;border:none;font-family:var(--sans);}
+.auth-tab.active{background:var(--ink);color:#fff;}
+.auth-err{font-size:12px;color:#991b1b;margin-bottom:12px;padding:8px 12px;background:#fee2e2;border-radius:8px;display:none;}
+
+/* ONBOARDING */
+#onboard-screen{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:999;overflow-y:auto;}
+.onboard-box{background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:40px;width:100%;max-width:560px;margin:20px;}
+.onboard-box h2{font-family:var(--serif);font-size:24px;font-weight:400;margin-bottom:6px;}
+.onboard-box p{font-size:13px;color:var(--ink3);margin-bottom:24px;}
+.step-indicator{display:flex;gap:6px;margin-bottom:24px;}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--surface2);}
+.step-dot.active{background:var(--accent);}
+.step-dot.done{background:var(--green);}
+@media(max-width:800px){.shell{grid-template-columns:1fr}.sidebar{display:none}.grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <h1>CareerKit</h1>
+    <p class="tagline">Your AI-powered job search assistant</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign in</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">Create account</button>
+    </div>
+    <div class="auth-err" id="auth-err"></div>
+    <div class="field"><label>Email</label><input type="email" id="auth-email" placeholder="you@email.com"></div>
+    <div class="field" id="auth-name-field" style="display:none"><label>Full name</label><input type="text" id="auth-name" placeholder="Your name"></div>
+    <div class="field"><label>Password</label><input type="password" id="auth-password" placeholder="Password"></div>
+    <button class="btn btn-primary btn-full" id="auth-submit-btn" onclick="handleAuth()">Sign in</button>
+    <p style="font-size:12px;color:var(--ink3);text-align:center;margin-top:14px;" id="auth-switch-text">Don't have an account? <span style="color:var(--accent);cursor:pointer;" onclick="switchAuthTab('signup')">Create one free</span></p>
+  </div>
+</div>
+
+<!-- ONBOARDING -->
+<div id="onboard-screen" style="display:none">
+  <div class="onboard-box">
+    <div class="step-indicator" id="step-dots"></div>
+    <div id="onboard-steps"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="shell" id="main-app" style="display:none">
+  <aside class="sidebar">
+    <div class="sb-logo"><h1>CareerKit</h1><p>ai job assistant</p></div>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sb-avatar">?</div>
+      <div class="sb-user-info">
+        <div class="sb-username" id="sb-username">—</div>
+        <div class="sb-email" id="sb-email-display">—</div>
+      </div>
+      <button class="sb-logout" onclick="logout()" title="Sign out">⏻</button>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">workspace</div>
+      <button class="sb-btn active" onclick="show('docs')" id="nav-docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Documents
+      </button>
+      <button class="sb-btn" onclick="show('generate')" id="nav-generate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Generate CV / Letter
+      </button>
+      <button class="sb-btn" onclick="show('email')" id="nav-email">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Cold Email Writer
+      </button>
+      <button class="sb-btn" onclick="show('jobs')" id="nav-jobs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Job Finder
+      </button>
+      <button class="sb-btn" onclick="show('interview')" id="nav-interview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Interview Prep
+      </button>
+      <button class="sb-btn" onclick="show('tracker')" id="nav-tracker">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg>Application Tracker
+      </button>
+      <button class="sb-btn" onclick="show('analytics')" id="nav-analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Analytics
+      </button>
+      <button class="sb-btn" onclick="show('notes')" id="nav-notes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Notes &amp; Journal
+      </button>
+      <button class="sb-btn" onclick="show('chat')" id="nav-chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>AI Career Chat
+      </button>
+    </nav>
+  </aside>
+
+  <main>
+
+    <!-- DOCUMENTS -->
+    <div class="panel active" id="panel-docs">
+      <div class="ph"><div><h2>Documents</h2><p>Upload CVs, cover letters, job descriptions — no limit</p></div>
+        <label class="btn btn-primary" style="cursor:pointer;">+ Upload<input type="file" id="bulk-upload" multiple accept=".pdf,.doc,.docx,.txt" style="display:none" onchange="handleUpload(this)"></label>
+      </div>
+      <div id="drop-zone" style="border:2px dashed var(--surface2);border-radius:var(--r2);padding:36px;text-align:center;cursor:pointer;background:var(--surface);transition:all 0.2s;" onclick="document.getElementById('bulk-upload').click()">
+        <div style="font-size:32px;margin-bottom:10px;">📄</div>
+        <p style="font-weight:500;margin-bottom:4px;">Drop files here or click to upload</p>
+        <p style="font-size:12px;color:var(--ink3);">PDFs, Word docs, text files · Unlimited uploads · Synced to your account</p>
+      </div>
+      <div id="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;"></div>
+    </div>
+
+    <!-- GENERATE -->
+    <div class="panel" id="panel-generate">
+      <div class="ph"><div><h2>Generate Application</h2><p>Tailored CV or cover letter for any job</p></div></div>
+      <div class="grid2" style="align-items:start;">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card">
+            <h3>Output type</h3>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="gen-type-pills">
+              <button class="btn btn-primary btn-sm" onclick="setGenType('cv',this)">CV / Resume</button>
+              <button class="btn btn-ghost btn-sm" onclick="setGenType('cover',this)">Cover Letter</button>
+              <button class="btn btn-ghost btn-sm" onclick="setGenType('both',this)">Both</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Job details</h3>
+            <div class="field"><label>Job description</label><textarea id="gen-jd" placeholder="Paste the full job description..." style="min-height:140px;"></textarea></div>
+            <div class="field"><label>Company</label><input type="text" id="gen-company" placeholder="Company name"></div>
+            <div class="field"><label>Role title</label><input type="text" id="gen-role" placeholder="Job title"></div>
+          </div>
+          <div class="card">
+            <h3>Reference docs <span style="font-size:10px;font-weight:400;color:var(--ink3);">(click to select)</span></h3>
+            <div id="gen-doc-sel" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;max-height:160px;overflow-y:auto;"></div>
+          </div>
+          <button class="btn btn-primary btn-full" id="gen-btn" onclick="generateOutput()">Generate application</button>
+        </div>
+        <div class="card" style="position:sticky;top:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <h3>Output</h3>
+            <div style="display:flex;gap:8px;"><button class="btn btn-ghost btn-sm" onclick="copyText('gen-output')">Copy</button><button class="btn btn-ghost btn-sm" onclick="dlText('gen-output')">Download</button></div>
+          </div>
+          <div class="output-box muted" id="gen-output">Your tailored application will appear here...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EMAIL -->
+    <div class="panel" id="panel-email">
+      <div class="ph"><div><h2>Cold Email Writer</h2><p>Outreach emails in your voice</p></div></div>
+      <div class="grid2" style="align-items:start;">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card">
+            <h3>Email type</h3>
+            <div style="display:flex;flex-direction:column;gap:6px;" id="email-type-pills">
+              <button class="btn btn-primary btn-sm btn-full" onclick="setEmailType('internship',this)">Internship / Graduate outreach</button>
+              <button class="btn btn-ghost btn-sm btn-full" onclick="setEmailType('workexp',this)">Work experience request</button>
+              <button class="btn btn-ghost btn-sm btn-full" onclick="setEmailType('networking',this)">Networking / General inquiry</button>
+              <button class="btn btn-ghost btn-sm btn-full" onclick="setEmailType('followup',this)">Follow-up email</button>
+              <button class="btn btn-ghost btn-sm btn-full" onclick="setEmailType('recruiter',this)">Recruiter outreach</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Details</h3>
+            <div class="field"><label>Company name</label><input type="text" id="email-company" placeholder="e.g. Spark NZ"></div>
+            <div class="field"><label>Contact name (optional)</label><input type="text" id="email-contact" placeholder="e.g. Sarah / Hiring Manager"></div>
+            <div class="field"><label>About the company</label><textarea id="email-about" placeholder="What do you know about them?" style="min-height:70px;"></textarea></div>
+            <div class="field"><label>Target role / department</label><input type="text" id="email-role" placeholder="e.g. IT / data team"></div>
+          </div>
+          <button class="btn btn-primary btn-full" id="email-btn" onclick="generateEmail()">Write cold email</button>
+        </div>
+        <div class="card" style="position:sticky;top:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <h3>Email output</h3>
+            <button class="btn btn-ghost btn-sm" onclick="copyText('email-output')">Copy</button>
+          </div>
+          <div class="output-box muted" id="email-output">Your cold email will appear here...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOB FINDER -->
+    <div class="panel" id="panel-jobs">
+      <div class="ph">
+        <div><h2>Job Finder</h2><p>Live Auckland jobs posted within 24 hours matching your profile</p></div>
+        <button class="btn btn-primary" id="jobs-search-btn" onclick="searchJobs()">Search now</button>
+      </div>
+      <div class="card">
+        <h3>Search filters</h3>
+        <div class="grid3">
+          <div class="field"><label>Keywords</label><input type="text" id="jobs-keywords" placeholder="e.g. IT support, data analyst" value="IT support data graduate entry level"></div>
+          <div class="field"><label>Job category</label>
+            <select id="jobs-cat">
+              <option value="it-jobs">IT / Technology</option>
+              <option value="customer-service-jobs">Customer Service</option>
+              <option value="admin-jobs">Admin / Office</option>
+              <option value="graduate-jobs">Graduate</option>
+              <option value="sales-jobs">Sales / Retail</option>
+            </select>
+          </div>
+          <div class="field"><label>Max results</label>
+            <select id="jobs-max">
+              <option value="5">5 jobs</option>
+              <option value="10" selected>10 jobs</option>
+              <option value="20">20 jobs</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="jobs-results"><div style="text-align:center;padding:48px;color:var(--ink3);"><p style="font-size:32px;margin-bottom:12px;">🔍</p><p style="font-weight:500;">Click "Search now" to find live Auckland jobs</p><p style="font-size:13px;margin-top:6px;">Pulls real jobs posted in the last 24 hours</p></div></div>
+    </div>
+
+    <!-- INTERVIEW PREP -->
+    <div class="panel" id="panel-interview">
+      <div class="ph"><div><h2>Interview Prep</h2><p>Practice questions tailored to any job, with space to write your answers</p></div></div>
+      <div class="grid2" style="align-items:start;">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card">
+            <h3>Generate questions</h3>
+            <div class="field"><label>Job description or role</label><textarea id="iq-jd" placeholder="Paste a job description, or just type the role e.g. IT Support Specialist at Spark..." style="min-height:120px;"></textarea></div>
+            <div class="field"><label>Question type</label>
+              <select id="iq-type">
+                <option value="mixed">Mixed (behavioural + technical)</option>
+                <option value="behavioural">Behavioural only</option>
+                <option value="technical">Technical only</option>
+                <option value="situational">Situational / scenario-based</option>
+                <option value="competency">Competency-based</option>
+              </select>
+            </div>
+            <div class="field"><label>Number of questions</label>
+              <select id="iq-count">
+                <option value="5">5 questions</option>
+                <option value="10" selected>10 questions</option>
+                <option value="15">15 questions</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-full" id="iq-btn" onclick="generateInterviewQs()">Generate questions</button>
+          </div>
+          <div class="card">
+            <h3>Save session</h3>
+            <div class="field"><label>Session name</label><input type="text" id="iq-session-name" placeholder="e.g. Spark IT Support – May 2026"></div>
+            <button class="btn btn-ghost btn-full btn-sm" onclick="saveIQSession()">Save this practice session</button>
+          </div>
+        </div>
+        <div>
+          <div id="iq-questions-wrap" style="display:flex;flex-direction:column;gap:12px;">
+            <div style="text-align:center;padding:48px;color:var(--ink3);background:#fff;border:1px solid var(--border);border-radius:var(--r2);">
+              <p style="font-size:28px;margin-bottom:10px;">🎯</p>
+              <p style="font-weight:500;">Practice questions will appear here</p>
+              <p style="font-size:13px;margin-top:4px;">Type your answers in the boxes — they save automatically</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="iq-saved-wrap">
+        <h3>Saved practice sessions</h3>
+        <div id="iq-saved-list"><p style="font-size:13px;color:var(--ink3);">No saved sessions yet.</p></div>
+      </div>
+    </div>
+
+    <!-- TRACKER -->
+    <div class="panel" id="panel-tracker">
+      <div class="ph">
+        <div><h2>Application Tracker</h2><p>Every application in one place</p></div>
+        <button class="btn btn-primary" onclick="toggleAddJob()">+ Log application</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;">
+        <div class="kpi"><div class="kpi-label">total</div><div class="kpi-val" id="t-total">0</div></div>
+        <div class="kpi"><div class="kpi-label">awaiting</div><div class="kpi-val" style="color:#92400e;" id="t-await">0</div></div>
+        <div class="kpi"><div class="kpi-label">applied</div><div class="kpi-val" style="color:var(--blue);" id="t-applied">0</div></div>
+        <div class="kpi"><div class="kpi-label">interviews</div><div class="kpi-val" style="color:var(--green);" id="t-interview">0</div></div>
+        <div class="kpi"><div class="kpi-label">rejected</div><div class="kpi-val" style="color:#991b1b;" id="t-rejected">0</div></div>
+      </div>
+      <div class="card" id="add-job-form" style="display:none;">
+        <h3>Log new application</h3>
+        <div class="grid3" style="margin-top:12px;">
+          <div class="field"><label>Company</label><input type="text" id="aj-company"></div>
+          <div class="field"><label>Role</label><input type="text" id="aj-role"></div>
+          <div class="field"><label>Date</label><input type="date" id="aj-date"></div>
+          <div class="field"><label>Job type</label><input type="text" id="aj-type" placeholder="IT, Customer Service..."></div>
+          <div class="field"><label>Platform</label><input type="text" id="aj-platform" placeholder="SEEK, cold email..."></div>
+          <div class="field"><label>Status</label>
+            <select id="aj-status"><option>Applied</option><option>Awaiting</option><option>Interview</option><option>Offer</option><option>Rejected</option><option>No Response</option><option>Experience</option><option>Volunteer</option></select>
+          </div>
+        </div>
+        <div class="field"><label>Notes</label><textarea id="aj-notes" style="min-height:60px;"></textarea></div>
+        <div style="display:flex;gap:10px;"><button class="btn btn-primary btn-sm" onclick="addJob()">Save</button><button class="btn btn-ghost btn-sm" onclick="toggleAddJob()">Cancel</button></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tbl">
+          <thead><tr><th>#</th><th>Date</th><th>Role</th><th>Company</th><th>Type</th><th>Platform</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="tracker-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="panel" id="panel-analytics">
+      <div class="ph"><div><h2>Analytics</h2><p>Insights from your application data</p></div><button class="btn btn-ghost btn-sm" onclick="renderAnalytics()">↺ Refresh</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;" id="analytics-kpis"></div>
+      <div class="grid2">
+        <div class="card"><h3>Status breakdown</h3><div id="legend-status" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:11px;"></div><div style="position:relative;height:200px;"><canvas id="chart-status"></canvas></div></div>
+        <div class="card"><h3>By job type</h3><div style="position:relative;" id="chart-type-wrap"><canvas id="chart-type"></canvas></div></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><h3>By platform</h3><div id="legend-platform" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:11px;"></div><div style="position:relative;height:220px;"><canvas id="chart-platform"></canvas></div></div>
+        <div class="card"><h3>Application velocity</h3><div style="position:relative;height:220px;"><canvas id="chart-velocity"></canvas></div></div>
+      </div>
+      <div class="card"><h3>Insights &amp; recommendations</h3><div id="insights-body" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;"></div></div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="panel" id="panel-notes">
+      <div class="ph"><div><h2>Notes &amp; Journal</h2><p>Save courses, interview reflections, anything you want to keep</p></div></div>
+      <div class="grid2" style="align-items:start;">
+        <div class="card">
+          <h3>Add new note</h3>
+          <div class="field"><label>Category</label>
+            <select id="note-cat">
+              <option value="Course">📚 Course / Resource</option>
+              <option value="Interview">🎤 Interview experience</option>
+              <option value="Reflection">💭 Reflection / What to improve</option>
+              <option value="Strategy">🎯 Job search strategy</option>
+              <option value="Other">📝 Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Title</label><input type="text" id="note-title" placeholder="e.g. Google Python Course, ANZ interview debrief..."></div>
+          <div class="field"><label>Content</label><textarea id="note-content" placeholder="Write anything — notes, links, reflections, what happened, what you'll do differently..." style="min-height:140px;"></textarea></div>
+          <button class="btn btn-primary btn-full btn-sm" onclick="addNote()">Save note</button>
+        </div>
+        <div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;" id="note-filter-pills">
+            <button class="btn btn-primary btn-sm" onclick="filterNotes('all',this)">All</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterNotes('Course',this)">📚 Courses</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterNotes('Interview',this)">🎤 Interviews</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterNotes('Reflection',this)">💭 Reflections</button>
+            <button class="btn btn-ghost btn-sm" onclick="filterNotes('Strategy',this)">🎯 Strategy</button>
+          </div>
+          <div id="notes-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="panel" id="panel-chat">
+      <div class="ph"><div><h2>AI Career Chat</h2><p>Ask anything about your job search</p></div></div>
+      <div style="display:flex;flex-direction:column;height:calc(100vh - 160px);">
+        <div id="chat-messages" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:4px 0;"></div>
+        <div style="display:flex;gap:10px;padding-top:14px;border-top:1px solid var(--border2);">
+          <textarea id="chat-input" placeholder="Ask anything..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);font-size:13px;resize:none;height:48px;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+          <button class="btn btn-primary" onclick="sendChat()" id="chat-btn">Send</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── FIREBASE ────────────────────────────────────────────────
+const firebaseConfig={apiKey:"AIzaSyCbu_ukX5dT0MZwucuTXyU1eOe1FNEdcsg",authDomain:"career-assistant-2d2fe.firebaseapp.com",projectId:"career-assistant-2d2fe",storageBucket:"career-assistant-2d2fe.firebasestorage.app",messagingSenderId:"79160941661",appId:"1:79160941661:web:e4490f59e9c5c19e4701b4",measurementId:"G-GZZL1Y1ZTM"};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+
+// ─── STATE ───────────────────────────────────────────────────
+let currentUser=null,userProfile={},docs=[],tracker=[],notes=[],iqSessions=[];
+let genType='cv',emailType='internship',noteFilter='all',chatHistory=[];
+let chartInstances={};
+
+// ─── ANTHROPIC API ───────────────────────────────────────────
+async function callClaude(messages,system){
+  const sys=system||(buildSystemPrompt());
+  const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages})});
+  const data=await res.json();
+  if(data.error)throw new Error(data.error.message);
+  return data.content.map(c=>c.text||'').join('');
+}
+
+function buildSystemPrompt(){
+  const p=userProfile;
+  return `You are a career assistant for ${p.name||'the user'}.
+PROFILE:
+Name: ${p.name||'—'} | Email: ${p.email||'—'} | Location: ${p.location||'Auckland, NZ'}
+Education: ${p.education||'—'}
+Skills: ${p.skills||'—'}
+Experience: ${p.experience||'—'}
+Target roles: ${p.targetRoles||'—'}
+Career goals: ${p.goals||'—'}
+
+PROJECTS (always mention for AI/tech roles):
+1. InsightSkele — AI Content Video Channel (YouTube)
+   Created AI-generated educational videos using Kling/Minimax via the Flow application, Veo3 for video generation, Nano Banana for AI visuals, CapCut for editing, and ElevenLabs for AI voiceover. Demonstrates practical application of multiple AI tools and content creation pipelines.
+2. CareerKit — AI Career Assistant Web App
+   Built a full-stack career assistant web app using HTML/CSS/JS integrated with the Claude API (Anthropic). Features include document management, AI-generated CVs and cover letters, cold email writer, live job search, interview prep, application tracker, analytics dashboard, and Firebase authentication + Firestore database. Demonstrates API integration, UI/UX design, and AI-powered automation.
+
+WRITING STYLE: Match the user's natural voice. Warm, honest, confident but not arrogant. Never fabricate experience. Highlight transferable skills. Keep it human and realistic.`;
+}
+
+// ─── AUTH ────────────────────────────────────────────────────
+let authMode='login';
+function switchAuthTab(mode){
+  authMode=mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>{t.classList.toggle('active',(i===0&&mode==='login')||(i===1&&mode==='signup'));});
+  document.getElementById('auth-name-field').style.display=mode==='signup'?'block':'none';
+  document.getElementById('auth-submit-btn').textContent=mode==='login'?'Sign in':'Create account';
+  document.getElementById('auth-switch-text').innerHTML=mode==='login'?'Don\'t have an account? <span style="color:var(--accent);cursor:pointer;" onclick="switchAuthTab(\'signup\')">Create one free</span>':'Already have an account? <span style="color:var(--accent);cursor:pointer;" onclick="switchAuthTab(\'login\')">Sign in</span>';
+  document.getElementById('auth-err').style.display='none';
+}
+async function handleAuth(){
+  const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-password').value;
+  const errEl=document.getElementById('auth-err');
+  errEl.style.display='none';
+  if(!email||!pass){errEl.textContent='Please enter email and password.';errEl.style.display='block';return;}
+  const btn=document.getElementById('auth-submit-btn');
+  btn.disabled=true;btn.textContent='Please wait...';
+  try{
+    if(authMode==='login'){
+      await auth.signInWithEmailAndPassword(email,pass);
+    } else {
+      const name=document.getElementById('auth-name').value.trim();
+      if(!name){errEl.textContent='Please enter your name.';errEl.style.display='block';btn.disabled=false;btn.textContent='Create account';return;}
+      const cred=await auth.createUserWithEmailAndPassword(email,pass);
+      await db.collection('users').doc(cred.user.uid).set({name,email,createdAt:new Date().toISOString()});
+    }
+  } catch(e){
+    errEl.textContent=e.message.replace('Firebase: ','');
+    errEl.style.display='block';
+    btn.disabled=false;
+    btn.textContent=authMode==='login'?'Sign in':'Create account';
+  }
+}
+function logout(){auth.signOut();}
+
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    currentUser=user;
+    document.getElementById('auth-screen').style.display='none';
+    const snap=await db.collection('users').doc(user.uid).get();
+    if(snap.exists){
+      userProfile=snap.data()||{};
+      if(!userProfile.onboardingDone){showOnboarding();}
+      else{launchApp();}
+    } else {
+      userProfile={email:user.email};
+      showOnboarding();
+    }
+  } else {
+    currentUser=null;
+    document.getElementById('auth-screen').style.display='flex';
+    document.getElementById('main-app').style.display='none';
+    document.getElementById('onboard-screen').style.display='none';
+  }
+});
+
+// ─── ONBOARDING ──────────────────────────────────────────────
+const onboardSteps=[
+  {title:'Welcome! Let\'s set up your profile',desc:'This takes 2 minutes and helps the AI generate better applications for you.',fields:[
+    {id:'ob-name',label:'Full name',type:'text',placeholder:'Your name'},
+    {id:'ob-location',label:'Location',type:'text',placeholder:'e.g. Auckland, NZ',value:'Auckland, New Zealand'},
+    {id:'ob-phone',label:'Phone (optional)',type:'text',placeholder:'+64 ...'},
+  ]},
+  {title:'Your education',desc:'Tell us about your highest qualification.',fields:[
+    {id:'ob-edu',label:'Education',type:'textarea',placeholder:'e.g. Bachelor of Computer Science, AUT, 2023–2025. Major: Networks & Cybersecurity, Minor: AI'},
+    {id:'ob-certs',label:'Certifications / courses (optional)',type:'textarea',placeholder:'e.g. Cisco CCNA, Google Data Analytics, Microsoft Azure...'},
+  ]},
+  {title:'Your skills & experience',desc:'What skills and experience do you have?',fields:[
+    {id:'ob-skills',label:'Technical skills',type:'textarea',placeholder:'e.g. Python, SQL, Excel, Tableau, networking, customer service...'},
+    {id:'ob-experience',label:'Experience',type:'textarea',placeholder:'e.g. Volunteer sales (2022–2024), AI chatbot project (2025)...'},
+  ]},
+  {title:'What are you looking for?',desc:'Tell us your job search goals.',fields:[
+    {id:'ob-roles',label:'Target roles',type:'text',placeholder:'e.g. IT support, data analyst, customer service, graduate roles'},
+    {id:'ob-goals',label:'Career goals',type:'textarea',placeholder:'e.g. I want to break into IT and build toward a cybersecurity or data role...'},
+    {id:'ob-email',label:'Contact email for applications',type:'email',placeholder:'your@email.com'},
+  ]},
+];
+let obStep=0;
+function showOnboarding(){
+  document.getElementById('onboard-screen').style.display='flex';
+  document.getElementById('main-app').style.display='none';
+  renderOnboardStep();
+}
+function renderOnboardStep(){
+  const s=onboardSteps[obStep];
+  const dots=onboardSteps.map((_,i)=>`<div class="step-dot ${i<obStep?'done':i===obStep?'active':''} "></div>`).join('');
+  document.getElementById('step-dots').innerHTML=dots;
+  document.getElementById('onboard-steps').innerHTML=`
+    <h2>${s.title}</h2><p>${s.desc}</p>
+    ${s.fields.map(f=>`<div class="field"><label>${f.label}</label>${f.type==='textarea'?`<textarea id="${f.id}" placeholder="${f.placeholder}" style="min-height:90px;">${f.value||''}</textarea>`:`<input type="${f.type}" id="${f.id}" placeholder="${f.placeholder}" value="${f.value||''}">`}</div>`).join('')}
+    <div style="display:flex;justify-content:space-between;margin-top:8px;">
+      ${obStep>0?'<button class="btn btn-ghost" onclick="obStep--;renderOnboardStep()">← Back</button>':'<div></div>'}
+      <button class="btn btn-primary" onclick="obNext()">${obStep===onboardSteps.length-1?'Finish setup →':'Continue →'}</button>
+    </div>`;
+  if(userProfile){
+    const fieldMap={'ob-name':'name','ob-location':'location','ob-phone':'phone','ob-edu':'education','ob-certs':'certs','ob-skills':'skills','ob-experience':'experience','ob-roles':'targetRoles','ob-goals':'goals','ob-email':'contactEmail'};
+    s.fields.forEach(f=>{const el=document.getElementById(f.id);if(el&&userProfile[fieldMap[f.id]])el.value=userProfile[fieldMap[f.id]];});
+  }
+}
+async function obNext(){
+  const s=onboardSteps[obStep];
+  const fieldMap={'ob-name':'name','ob-location':'location','ob-phone':'phone','ob-edu':'education','ob-certs':'certs','ob-skills':'skills','ob-experience':'experience','ob-roles':'targetRoles','ob-goals':'goals','ob-email':'contactEmail'};
+  s.fields.forEach(f=>{const el=document.getElementById(f.id);if(el){userProfile[fieldMap[f.id]]=el.value.trim();}});
+  if(obStep===onboardSteps.length-1){
+    userProfile.onboardingDone=true;
+    await db.collection('users').doc(currentUser.uid).set(userProfile,{merge:true});
+    document.getElementById('onboard-screen').style.display='none';
+    launchApp();
+  } else {obStep++;renderOnboardStep();}
+}
+
+// ─── APP LAUNCH ──────────────────────────────────────────────
+async function launchApp(){
+  document.getElementById('main-app').style.display='grid';
+  document.getElementById('onboard-screen').style.display='none';
+  const name=userProfile.name||'User';
+  document.getElementById('sb-username').textContent=name;
+  document.getElementById('sb-email-display').textContent=currentUser.email;
+  document.getElementById('sb-avatar').textContent=name.charAt(0).toUpperCase();
+  await loadUserData();
+  renderDocs();renderTracker();renderGenDocSel();renderNotes();renderSavedSessions();
+  chatHistory=[{role:'user',content:'Hi'},{role:'assistant',content:`Hi ${name}! I'm your CareerKit assistant. I know your full profile — ask me anything about your job search, interview prep, or applications.`}];
+  const cm=document.getElementById('chat-messages');
+  cm.innerHTML=`<div style="display:flex;gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0;font-family:var(--serif);">C</div><div style="background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:12px 16px;max-width:600px;font-size:13px;line-height:1.75;">Hi ${name}! I'm your CareerKit assistant. I know your full profile — ask me anything about your job search, interview prep, or applications.</div></div>`;
+}
+async function loadUserData(){
+  const uid=currentUser.uid;
+  const [docsSnap,trackerSnap,notesSnap,iqSnap]=await Promise.all([
+    db.collection('users').doc(uid).collection('docs').orderBy('createdAt','desc').get(),
+    db.collection('users').doc(uid).collection('tracker').orderBy('id').get(),
+    db.collection('users').doc(uid).collection('notes').orderBy('createdAt','desc').get(),
+    db.collection('users').doc(uid).collection('iqSessions').orderBy('createdAt','desc').get(),
+  ]);
+  docs=docsSnap.docs.map(d=>({fsId:d.id,...d.data()}));
+  tracker=trackerSnap.docs.map(d=>({fsId:d.id,...d.data()}));
+  notes=notesSnap.docs.map(d=>({fsId:d.id,...d.data()}));
+  iqSessions=iqSnap.docs.map(d=>({fsId:d.id,...d.data()}));
+}
+async function saveToFS(col,data,fsId=null){
+  const uid=currentUser.uid;
+  const ref=db.collection('users').doc(uid).collection(col);
+  if(fsId){await ref.doc(fsId).set(data,{merge:true});return fsId;}
+  const newDoc=await ref.add({...data,createdAt:new Date().toISOString()});
+  return newDoc.id;
+}
+async function deleteFromFS(col,fsId){
+  await db.collection('users').doc(currentUser.uid).collection(col).doc(fsId).delete();
+}
+
+// ─── NAV ─────────────────────────────────────────────────────
+function show(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if(name==='analytics')renderAnalytics();
+  if(name==='tracker')renderTracker();
+}
+
+// ─── TOAST ───────────────────────────────────────────────────
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ─── DOCUMENTS ───────────────────────────────────────────────
+function handleUpload(input){
+  Array.from(input.files).forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=async e=>{
+      const name=file.name.replace(/\.[^.]+$/,'');
+      const lower=name.toLowerCase();
+      let type='other';
+      if(lower.includes('cv')||lower.includes('resume'))type='cv';
+      else if(lower.includes('cover')||lower.includes('letter'))type='cover';
+      else if(lower.includes('job')||lower.includes('desc')||lower.includes('jd'))type='jd';
+      const text=e.target.result;
+      const obj={name,type,text:text.slice(0,5000)};
+      const fsId=await saveToFS('docs',obj);
+      docs.unshift({fsId,...obj});
+      renderDocs();renderGenDocSel();
+      toast(`"${name}" uploaded`);
+    };
+    reader.readAsText(file);
+  });
+  input.value='';
+}
+const typeIcon={cv:'📋',cover:'✉️',jd:'💼',other:'📄'};
+const typeLabel={cv:'CV',cover:'Cover Letter',jd:'Job Description',other:'Document'};
+let selectedDocs=[];
+function renderDocs(){
+  const grid=document.getElementById('doc-grid');
+  if(!docs.length){grid.innerHTML='<p style="color:var(--ink3);font-size:13px;grid-column:1/-1;">No documents uploaded yet.</p>';return;}
+  grid.innerHTML=docs.map(d=>`<div style="background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:16px;position:relative;cursor:pointer;" onclick="toggleDocSel('${d.fsId}',this)" class="${selectedDocs.includes(d.fsId)?'selected':''}" style="border-color:${selectedDocs.includes(d.fsId)?'var(--accent)':'var(--border)'};">
+    <div style="font-size:28px;margin-bottom:10px;">${typeIcon[d.type]||'📄'}</div>
+    <div style="font-size:13px;font-weight:500;margin-bottom:3px;">${d.name}</div>
+    <div style="font-size:11px;color:var(--ink3);font-family:var(--mono);">${typeLabel[d.type]||'Document'}</div>
+    <button onclick="event.stopPropagation();delDoc('${d.fsId}')" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--ink4);font-size:14px;">✕</button>
+  </div>`).join('');
+}
+function toggleDocSel(id,el){
+  const idx=selectedDocs.indexOf(id);
+  if(idx>-1)selectedDocs.splice(idx,1);else selectedDocs.push(id);
+  el.style.borderColor=selectedDocs.includes(id)?'var(--accent)':'var(--border)';
+  renderGenDocSel();
+}
+async function delDoc(fsId){
+  docs=docs.filter(d=>d.fsId!==fsId);
+  selectedDocs=selectedDocs.filter(s=>s!==fsId);
+  await deleteFromFS('docs',fsId);
+  renderDocs();renderGenDocSel();toast('Document removed');
+}
+function renderGenDocSel(){
+  const el=document.getElementById('gen-doc-sel');
+  if(!docs.length){el.innerHTML='<p style="font-size:12px;color:var(--ink3);">Upload documents first.</p>';return;}
+  el.innerHTML=docs.map(d=>`<div onclick="toggleDocSel('${d.fsId}',this)" style="padding:8px 10px;border:1px solid ${selectedDocs.includes(d.fsId)?'var(--accent)':'var(--border)'};border-radius:var(--r);font-size:12px;cursor:pointer;background:${selectedDocs.includes(d.fsId)?'var(--accent3)':'#fff'};transition:all 0.15s;">
+    <div style="font-weight:500;margin-bottom:2px;">${d.name}</div>
+    <div style="font-size:10px;color:var(--ink3);font-family:var(--mono);">${typeLabel[d.type]||'doc'}</div>
+  </div>`).join('');
+}
+
+// ─── GENERATE ────────────────────────────────────────────────
+function setGenType(t,el){
+  genType=t;
+  document.querySelectorAll('#gen-type-pills .btn').forEach(b=>{b.className='btn btn-ghost btn-sm';});
+  el.className='btn btn-primary btn-sm';
+}
+async function generateOutput(){
+  const jd=document.getElementById('gen-jd').value.trim();
+  const company=document.getElementById('gen-company').value.trim();
+  const role=document.getElementById('gen-role').value.trim();
+  if(!jd&&!company){toast('Enter a job description or company name');return;}
+  const btn=document.getElementById('gen-btn');
+  const out=document.getElementById('gen-output');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Generating...';
+  out.textContent='Generating your tailored application...';out.classList.add('muted');
+  const refDocs=docs.filter(d=>selectedDocs.includes(d.fsId));
+  const docsText=refDocs.length?'\n\nREFERENCE DOCUMENTS:\n'+refDocs.map(d=>`--- ${d.name} (${d.type}) ---\n${d.text.slice(0,2000)}`).join('\n\n'):'';
+  const typeMap={cv:'a tailored CV/resume',cover:'a tailored cover letter',both:'both a tailored CV and a tailored cover letter'};
+  const isAI=(jd+company+role).toLowerCase().match(/ai|machine learning|data|tech|software|engineer|analyst|cyber/);
+  const projectNote=isAI?'\nIMPORTANT: This is a tech/AI role. Include the InsightSkele AI video project and the CareerKit web app in the projects section.':''
+  const prompt=`Generate ${typeMap[genType]} for the user applying to:\nCOMPANY: ${company||'(see JD)'}\nROLE: ${role||'(see JD)'}\n\nJOB DESCRIPTION:\n${jd||'No JD provided.'}${docsText}${projectNote}\n\nRules: match the user's natural voice, do not fabricate experience, highlight transferable skills, optimize for ATS keywords.`;
+  try{
+    const result=await callClaude([{role:'user',content:prompt}]);
+    out.textContent=result;out.classList.remove('muted');
+  }catch(e){out.textContent='Error: '+e.message;out.classList.remove('muted');}
+  btn.disabled=false;btn.textContent='Generate application';
+}
+
+// ─── EMAIL ───────────────────────────────────────────────────
+function setEmailType(t,el){
+  emailType=t;
+  document.querySelectorAll('#email-type-pills .btn').forEach(b=>b.className=b.className.replace('btn-primary','btn-ghost'));
+  el.className='btn btn-primary btn-sm btn-full';
+}
+async function generateEmail(){
+  const company=document.getElementById('email-company').value.trim();
+  if(!company){toast('Enter a company name');return;}
+  const btn=document.getElementById('email-btn');
+  const out=document.getElementById('email-output');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Writing...';
+  out.textContent='Writing your cold email...';out.classList.add('muted');
+  const typeDesc={internship:'internship or graduate opportunity',workexp:'work experience request',networking:'networking / career inquiry',followup:'follow-up',recruiter:'recruiter outreach'};
+  const prompt=`Write a cold email for the user. Type: ${typeDesc[emailType]}.\nCOMPANY: ${company}\nCONTACT: ${document.getElementById('email-contact').value||'Hiring Manager'}\nABOUT: ${document.getElementById('email-about').value||'(not provided)'}\nROLE/DEPT: ${document.getElementById('email-role').value||'(not specified)'}\n\nWrite in the user's natural voice. Keep it concise — 3-4 short paragraphs. Include contact email and phone from their profile. Do not exaggerate experience.`;
+  try{
+    const result=await callClaude([{role:'user',content:prompt}]);
+    out.textContent=result;out.classList.remove('muted');
+  }catch(e){out.textContent='Error: '+e.message;out.classList.remove('muted');}
+  btn.disabled=false;btn.textContent='Write cold email';
+}
+
+// ─── JOB FINDER ──────────────────────────────────────────────
+async function searchJobs(){
+  const btn=document.getElementById('jobs-search-btn');
+  const wrap=document.getElementById('jobs-results');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Searching...';
+  wrap.innerHTML='<div style="text-align:center;padding:32px;color:var(--ink3);">Fetching live Auckland jobs...</div>';
+  const keywords=encodeURIComponent(document.getElementById('jobs-keywords').value||'entry level graduate');
+  const cat=document.getElementById('jobs-cat').value;
+  const maxRes=document.getElementById('jobs-max').value;
+  const appId='399b6122';
+  const apiKey='7f69624ba1d1ddad1851393ed9b9c941';
+  const url=`https://api.adzuna.com/v1/api/jobs/nz/search/1?app_id=${appId}&app_key=${apiKey}&results_per_page=${maxRes}&what=${keywords}&where=Auckland&category=${cat}&max_days_old=1&content-type=application/json`;
+  try{
+    const res=await fetch(url);
+    const data=await res.json();
+    const jobs=data.results||[];
+    if(!jobs.length){
+      wrap.innerHTML='<div style="text-align:center;padding:48px;color:var(--ink3);"><p style="font-size:28px;margin-bottom:10px;">😔</p><p style="font-weight:500;">No jobs found in the last 24 hours for these filters</p><p style="font-size:13px;margin-top:6px;">Try broader keywords or a different category</p></div>';
+      btn.disabled=false;btn.textContent='Search now';return;
+    }
+    wrap.innerHTML=jobs.map(j=>{
+      const posted=new Date(j.created).toLocaleDateString('en-NZ',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      const salary=j.salary_min?`$${Math.round(j.salary_min/1000)}k–$${Math.round(j.salary_max/1000)}k`:'';
+      const desc=(j.description||'').slice(0,300)+'...';
+      return `<div class="job-card">
+        <h4>${j.title}</h4>
+        <div class="jc-co">${j.company?.display_name||'Company'} · ${j.location?.display_name||'Auckland'} · Posted: ${posted}</div>
+        <div class="jc-tags">
+          <span class="pill pill-blue">${j.category?.label||cat}</span>
+          ${salary?`<span class="pill pill-green">${salary}</span>`:''}
+          <span class="pill pill-grey">📍 Auckland</span>
+        </div>
+        <div class="jc-desc">${desc}</div>
+        <div class="jc-actions">
+          <a href="${j.redirect_url}" target="_blank" class="btn btn-primary btn-sm">Apply →</a>
+          <button class="btn btn-ghost btn-sm" onclick="logJobFromFinder('${j.title.replace(/'/g,'&#39;')}','${(j.company?.display_name||'Unknown').replace(/'/g,'&#39;')}')">+ Log to tracker</button>
+          <button class="btn btn-ghost btn-sm" onclick="prepJobInterview('${j.title.replace(/'/g,'&#39;')}','${(j.company?.display_name||'Unknown').replace(/'/g,'&#39;')}','${desc.replace(/'/g,'&#39;').replace(/\n/g,' ')}')">Practice interview ↗</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){wrap.innerHTML=`<div style="padding:24px;color:#991b1b;background:#fee2e2;border-radius:var(--r2);">Error fetching jobs: ${e.message}<br><small>Check your Adzuna API key or try again.</small></div>`;}
+  btn.disabled=false;btn.textContent='Search now';
+}
+function logJobFromFinder(role,company){
+  document.getElementById('aj-role').value=role;
+  document.getElementById('aj-company').value=company;
+  document.getElementById('aj-platform').value='Adzuna / Job Finder';
+  document.getElementById('aj-date').value=new Date().toISOString().split('T')[0];
+  show('tracker');
+  document.getElementById('add-job-form').style.display='block';
+  toast('Job details loaded — review and save');
+}
+function prepJobInterview(role,company,desc){
+  document.getElementById('iq-jd').value=`Role: ${role}\nCompany: ${company}\n\n${desc}`;
+  show('interview');
+  toast('Job loaded for interview prep');
+}
+
+// ─── INTERVIEW PREP ──────────────────────────────────────────
+let currentIQs=[];
+async function generateInterviewQs(){
+  const jd=document.getElementById('iq-jd').value.trim();
+  if(!jd){toast('Enter a job description or role');return;}
+  const btn=document.getElementById('iq-btn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Generating...';
+  const qtype=document.getElementById('iq-type').value;
+  const count=document.getElementById('iq-count').value;
+  const prompt=`Generate ${count} ${qtype} interview questions for the following role/job description. Output ONLY a numbered list of questions, nothing else.\n\nJOB:\n${jd}`;
+  try{
+    const result=await callClaude([{role:'user',content:prompt}],'You are an expert career coach and interview preparation specialist. Generate realistic, specific interview questions based on the job provided.');
+    const lines=result.split('\n').filter(l=>l.trim().match(/^\d+\./));
+    currentIQs=lines.map(l=>l.replace(/^\d+\.\s*/,'').trim()).filter(Boolean);
+    if(!currentIQs.length)currentIQs=result.split('\n').filter(l=>l.trim().length>10).slice(0,parseInt(count));
+    renderIQs();
+  }catch(e){toast('Error: '+e.message);}
+  btn.disabled=false;btn.textContent='Generate questions';
+}
+function renderIQs(){
+  const wrap=document.getElementById('iq-questions-wrap');
+  if(!currentIQs.length)return;
+  wrap.innerHTML=currentIQs.map((q,i)=>`<div class="iq-card">
+    <div class="iq-q">${i+1}. ${q}</div>
+    <textarea class="iq-a" placeholder="Type your answer here — write it out fully for best practice..." id="iq-ans-${i}"></textarea>
+  </div>`).join('');
+}
+async function saveIQSession(){
+  const name=document.getElementById('iq-session-name').value.trim();
+  if(!name){toast('Enter a session name first');return;}
+  if(!currentIQs.length){toast('Generate questions first');return;}
+  const answers=currentIQs.map((_,i)=>document.getElementById(`iq-ans-${i}`)?.value||''  );
+  const session={name,questions:currentIQs,answers,jd:document.getElementById('iq-jd').value.slice(0,300)};
+  const fsId=await saveToFS('iqSessions',session);
+  iqSessions.unshift({fsId,...session});
+  renderSavedSessions();toast('Session saved!');
+}
+function renderSavedSessions(){
+  const el=document.getElementById('iq-saved-list');
+  if(!iqSessions.length){el.innerHTML='<p style="font-size:13px;color:var(--ink3);">No saved sessions yet.</p>';return;}
+  el.innerHTML=iqSessions.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-radius:var(--r);margin-bottom:8px;">
+    <div><div style="font-size:13px;font-weight:500;">${s.name}</div><div style="font-size:11px;color:var(--ink3);font-family:var(--mono);">${s.questions.length} questions · ${new Date(s.createdAt).toLocaleDateString('en-NZ')}</div></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost btn-sm" onclick="loadSession('${s.fsId}')">Load</button>
+      <button class="btn btn-ghost btn-sm" onclick="delSession('${s.fsId}')" style="color:var(--accent);">✕</button>
+    </div>
+  </div>`).join('');
+}
+function loadSession(fsId){
+  const s=iqSessions.find(x=>x.fsId===fsId);
+  if(!s)return;
+  currentIQs=s.questions;
+  document.getElementById('iq-jd').value=s.jd||''  ;
+  document.getElementById('iq-session-name').value=s.name;
+  renderIQs();
+  setTimeout(()=>{s.answers.forEach((a,i)=>{const el=document.getElementById(`iq-ans-${i}`);if(el)el.value=a;});},100);
+  toast('Session loaded');
+}
+async function delSession(fsId){
+  iqSessions=iqSessions.filter(s=>s.fsId!==fsId);
+  await deleteFromFS('iqSessions',fsId);
+  renderSavedSessions();toast('Session deleted');
+}
+
+// ─── TRACKER ─────────────────────────────────────────────────
+const statusPills={Applied:'pill-blue',Awaiting:'pill-yellow',Interview:'pill-green',Offer:'pill-green',Rejected:'pill-red',Experience:'pill-purple',Volunteer:'pill-purple','No Response':'pill-grey'};
+function renderTracker(){
+  const body=document.getElementById('tracker-body');
+  body.innerHTML=tracker.map((j,i)=>`<tr>
+    <td style="color:var(--ink4);font-size:11px;font-family:var(--mono);">${j.id}</td>
+    <td style="font-size:12px;color:var(--ink3);font-family:var(--mono);">${j.date||'—'}</td>
+    <td style="font-weight:500;">${j.role}</td>
+    <td>${j.company}</td>
+    <td style="font-size:12px;color:var(--ink3);">${j.type||''}</td>
+    <td style="font-size:12px;color:var(--ink3);">${j.platform||''}</td>
+    <td><span class="pill ${statusPills[j.status]||'pill-grey'}">${j.status}</span></td>
+    <td style="font-size:12px;color:var(--ink3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j.notes||''}</td>
+    <td><button onclick="delJob('${j.fsId||''}',${i})" style="background:none;border:none;cursor:pointer;color:var(--ink4);font-size:14px;">✕</button></td>
+  </tr>`).join('');
+  document.getElementById('t-total').textContent=tracker.length;
+  document.getElementById('t-await').textContent=tracker.filter(j=>j.status==='Awaiting').length;
+  document.getElementById('t-applied').textContent=tracker.filter(j=>j.status==='Applied').length;
+  document.getElementById('t-interview').textContent=tracker.filter(j=>['Interview','Offer'].includes(j.status)).length;
+  document.getElementById('t-rejected').textContent=tracker.filter(j=>j.status==='Rejected').length;
+}
+function toggleAddJob(){const f=document.getElementById('add-job-form');f.style.display=f.style.display==='none'?'block':'none';}
+async function addJob(){
+  const company=document.getElementById('aj-company').value.trim();
+  const role=document.getElementById('aj-role').value.trim();
+  if(!company||!role){toast('Company and role required');return;}
+  const job={id:tracker.length+1,date:document.getElementById('aj-date').value||''  ,role,company,type:document.getElementById('aj-type').value||''  ,platform:document.getElementById('aj-platform').value||''  ,status:document.getElementById('aj-status').value,notes:document.getElementById('aj-notes').value||''  };
+  const fsId=await saveToFS('tracker',job);
+  tracker.push({fsId,...job});
+  document.getElementById('add-job-form').style.display='none';
+  ['aj-company','aj-role','aj-date','aj-type','aj-platform','aj-notes'].forEach(id=>document.getElementById(id).value=''  );
+  renderTracker();toast('Application logged!');
+}
+async function delJob(fsId,idx){
+  if(!confirm('Remove this application?'))return;
+  if(fsId)await deleteFromFS('tracker',fsId);
+  tracker.splice(idx,1);
+  tracker.forEach((j,i)=>j.id=i+1);
+  renderTracker();toast('Removed');
+}
+
+// ─── ANALYTICS ───────────────────────────────────────────────
+function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}}
+function renderAnalytics(){
+  if(typeof Chart==='undefined'||!tracker.length){
+    document.getElementById('analytics-kpis').innerHTML='<p style="color:var(--ink3);font-size:13px;">Log some applications first to see analytics.</p>';return;
+  }
+  const t=tracker,total=t.length;
+  const statuses={};t.forEach(j=>{statuses[j.status]=(statuses[j.status]||0)+1;});
+  const rejected=statuses['Rejected']||0,interviews=(statuses['Interview']||0)+(statuses['Offer']||0);
+  const responseRate=total>0?Math.round(((rejected+interviews)/total)*100):0;
+  document.getElementById('analytics-kpis').innerHTML=[
+    {label:'total',value:total,color:'var(--ink)'},{label:'response rate',value:responseRate+'%',color:'var(--blue)'},
+    {label:'rejections',value:rejected,color:'#991b1b'},{label:'interviews',value:interviews,color:'var(--green)'},
+    {label:'awaiting',value:statuses['Awaiting']||0,color:'#92400e'},{label:'applied',value:statuses['Applied']||0,color:'var(--accent)'},
+  ].map(k=>`<div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-val" style="color:${k.color};">${k.value}</div></div>`).join('');
+  const sCols={Applied:'#1a4d8f',Awaiting:'#b45309',Interview:'#065f46',Offer:'#065f46',Rejected:'#991b1b',Experience:'#5b21b6',Volunteer:'#9d174d','No Response':'#374151'};
+  const sL=Object.keys(statuses),sD=sL.map(s=>statuses[s]),sC=sL.map(s=>sCols[s]||'#888');
+  document.getElementById('legend-status').innerHTML=sL.map((s,i)=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;"><span style="width:9px;height:9px;border-radius:2px;background:${sC[i]};display:inline-block;"></span>${s} (${sD[i]})</span>`).join('');
+  destroyChart('status');
+  chartInstances['status']=new Chart(document.getElementById('chart-status'),{type:'doughnut',data:{labels:sL,datasets:[{data:sD,backgroundColor:sC,borderWidth:2,borderColor:'#faf9f7'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}});
+  const types={};t.forEach(j=>{const tp=j.type||'Other';types[tp]=(types[tp]||0)+1;});
+  const tE=Object.entries(types).sort((a,b)=>b[1]-a[1]);
+  const tw=document.getElementById('chart-type-wrap');tw.style.height=Math.max(180,tE.length*34+40)+'px';tw.style.position='relative';
+  destroyChart('type');
+  chartInstances['type']=new Chart(document.getElementById('chart-type'),{type:'bar',data:{labels:tE.map(e=>e[0]),datasets:[{data:tE.map(e=>e[1]),backgroundColor:'#1a4d8f',borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888',stepSize:1},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},y:{ticks:{color:'#888',font:{size:11}},grid:{display:false},border:{display:false}}}}});
+  const plats={},platR={};
+  t.forEach(j=>{
+    let p=(j.platform||'Unknown').split('(')[0].split('/')[0].trim();
+    if(p.toLowerCase().includes('seek'))p='SEEK';else if(p.toLowerCase().includes('jora'))p='JORA';else if(p.toLowerCase().includes('cold'))p='Cold Email';else if(p.toLowerCase().includes('company')||p.toLowerCase().includes('form')||p.toLowerCase().includes('website'))p='Company Direct';else if(p.toLowerCase().includes('zeil'))p='ZEIL';
+    plats[p]=(plats[p]||0)+1;if(j.status==='Rejected')platR[p]=(platR[p]||0)+1;
+  });
+  const pE=Object.entries(plats).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('legend-platform').innerHTML='<span style="display:flex;align-items:center;gap:4px;font-size:11px;"><span style="width:9px;height:9px;border-radius:2px;background:#1D9E75;display:inline-block;"></span>Applications</span><span style="display:flex;align-items:center;gap:4px;font-size:11px;"><span style="width:9px;height:9px;border-radius:2px;background:#E24B4A;display:inline-block;"></span>Rejections</span>';
+  destroyChart('platform');
+  chartInstances['platform']=new Chart(document.getElementById('chart-platform'),{type:'bar',data:{labels:pE.map(e=>e[0]),datasets:[{label:'Apps',data:pE.map(e=>e[1]),backgroundColor:'#1D9E75',borderRadius:3},{label:'Rejected',data:pE.map(e=>platR[e[0]]||0),backgroundColor:'#E24B4A',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888',autoSkip:false,maxRotation:20,font:{size:10}},grid:{display:false},border:{display:false}},y:{ticks:{color:'#888',stepSize:1},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}}}});
+  const vel={};
+  t.forEach(j=>{let b='Before May';const d=j.date||''  ;if(d.includes('12-May')||d.includes('-05-12'))b='May 12';else if(d.includes('13-May')||d.includes('-05-13'))b='May 13';else if(d.includes('21-May')||d.includes('-05-21'))b='May 21';else if(d.includes('22-May')||d.includes('-05-22'))b='May 22';else if(d.includes('24-May')||d.includes('-05-24'))b='May 24';else if(d.includes('25-May')||d.includes('-05-25'))b='May 25';else if(d&&d.length>0)b=d;vel[b]=(vel[b]||0)+1;});
+  const vO=['Before May','May 12','May 13','May 21','May 22','May 24','May 25'];
+  const vL=[...vO.filter(k=>vel[k]),...Object.keys(vel).filter(k=>!vO.includes(k))];
+  destroyChart('velocity');
+  chartInstances['velocity']=new Chart(document.getElementById('chart-velocity'),{type:'bar',data:{labels:vL,datasets:[{data:vL.map(k=>vel[k]||0),backgroundColor:'#7F77DD',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888',autoSkip:false,font:{size:11}},grid:{display:false},border:{display:false}},y:{ticks:{color:'#888',stepSize:1},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}}}});
+  const insights=[];
+  if(responseRate<15)insights.push({i:'📊',t:`Response rate is <strong>${responseRate}%</strong> — normal for entry-level. Industry average is 10–20%. Keep applying consistently.`});
+  else insights.push({i:'✅',t:`Response rate is <strong>${responseRate}%</strong> — solid for entry-level applicants.`});
+  const topP=pE[0];if(topP)insights.push({i:'🔍',t:`<strong>${topP[0]}</strong> is your most-used platform (${topP[1]} applications).${platR[topP[0]]>1?' Consider diversifying.':''}`});
+  if(rejected/total>0.2)insights.push({i:'⚠️',t:`Rejection rate is above 20%. Review your CV for roles you're being rejected from.`});
+  const topT=tE[0];if(topT)insights.push({i:'💼',t:`<strong>${topT[0]}</strong> is your most-applied job type (${topT[1]}). Make sure your CV is tailored for it.`});
+  if(interviews===0&&total>10)insights.push({i:'🎯',t:`No interviews yet from ${total} applications. Focus on roles closely matching your background.`});
+  document.getElementById('insights-body').innerHTML=insights.map(x=>`<div style="display:flex;gap:12px;padding:12px 14px;background:var(--surface);border-radius:var(--r);"><span style="font-size:17px;flex-shrink:0;">${x.i}</span><p style="font-size:13px;line-height:1.6;color:var(--ink2);">${x.t}</p></div>`).join('');
+}
+
+// ─── NOTES ───────────────────────────────────────────────────
+async function addNote(){
+  const title=document.getElementById('note-title').value.trim();
+  const content=document.getElementById('note-content').value.trim();
+  if(!title||!content){toast('Title and content required');return;}
+  const note={title,content,category:document.getElementById('note-cat').value};
+  const fsId=await saveToFS('notes',note);
+  notes.unshift({fsId,...note,createdAt:new Date().toISOString()});
+  document.getElementById('note-title').value=''  ;document.getElementById('note-content').value=''  ;
+  renderNotes();toast('Note saved!');
+}
+function filterNotes(cat,el){
+  noteFilter=cat;
+  document.querySelectorAll('#note-filter-pills .btn').forEach(b=>b.className=b.className.replace('btn-primary','btn-ghost').replace('btn-ghost btn-ghost','btn-ghost'));
+  el.className=el.className.replace('btn-ghost','btn-primary');
+  renderNotes();
+}
+function renderNotes(){
+  const el=document.getElementById('notes-list');
+  const filtered=noteFilter==='all'?notes:notes.filter(n=>n.category===noteFilter);
+  if(!filtered.length){el.innerHTML='<p style="color:var(--ink3);font-size:13px;">No notes yet.</p>';return;}
+  const catEmoji={Course:'📚',Interview:'🎤',Reflection:'💭',Strategy:'🎯',Other:'📝'};
+  el.innerHTML=filtered.map(n=>`<div class="note-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span>${catEmoji[n.category]||'📝'}</span>
+      <h4>${n.title}</h4>
+      <span class="pill pill-grey" style="font-size:10px;">${n.category}</span>
+    </div>
+    <div class="note-meta">${new Date(n.createdAt).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}</div>
+    <p>${n.content}</p>
+    <button class="note-del" onclick="delNote('${n.fsId}')">✕</button>
+  </div>`).join('');
+}
+async function delNote(fsId){
+  notes=notes.filter(n=>n.fsId!==fsId);
+  await deleteFromFS('notes',fsId);
+  renderNotes();toast('Note deleted');
+}
+
+// ─── CHAT ────────────────────────────────────────────────────
+async function sendChat(){
+  const input=document.getElementById('chat-input');
+  const msg=input.value.trim();if(!msg)return;
+  input.value=''  ;
+  const cm=document.getElementById('chat-messages');
+  cm.innerHTML+=`<div style="display:flex;gap:10px;flex-direction:row-reverse;"><div style="width:30px;height:30px;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0;">${(userProfile.name||'U').charAt(0).toUpperCase()}</div><div style="background:var(--ink);color:#fff;border-radius:var(--r2);padding:12px 16px;max-width:600px;font-size:13px;line-height:1.75;">${msg}</div></div>`;
+  chatHistory.push({role:'user',content:msg});
+  const thinking=document.createElement('div');
+  thinking.style.cssText='display:flex;gap:10px;';
+  thinking.innerHTML=`<div style="width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0;font-family:var(--serif);">C</div><div style="background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:12px 16px;max-width:600px;font-size:13px;color:var(--ink3);font-style:italic;">Thinking...</div>`;
+  cm.appendChild(thinking);cm.scrollTop=cm.scrollHeight;
+  document.getElementById('chat-btn').disabled=true;
+  try{
+    const result=await callClaude(chatHistory.slice(-10));
+    thinking.remove();
+    chatHistory.push({role:'assistant',content:result});
+    cm.innerHTML+=`<div style="display:flex;gap:10px;"><div style="width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0;font-family:var(--serif);">C</div><div style="background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:12px 16px;max-width:600px;font-size:13px;line-height:1.75;white-space:pre-wrap;">${result}</div></div>`;
+  }catch(e){thinking.remove();cm.innerHTML+=`<div style="padding:12px;color:#991b1b;font-size:13px;">Error: ${e.message}</div>`;}
+  document.getElementById('chat-btn').disabled=false;
+  cm.scrollTop=cm.scrollHeight;
+}
+
+// ─── UTILS ───────────────────────────────────────────────────
+function copyText(id){navigator.clipboard.writeText(document.getElementById(id).textContent);toast('Copied!');}
+function dlText(id){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([document.getElementById(id).textContent],{type:'text/plain'}));a.download='application.txt';a.click();toast('Downloaded');}
+
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--accent)';dz.style.background='var(--accent3)';});
+dz.addEventListener('dragleave',()=>{dz.style.borderColor='var(--surface2)';dz.style.background='var(--surface)';});
+dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='var(--surface2)';dz.style.background='var(--surface)';Array.from(e.dataTransfer.files).forEach(f=>{const r=new FileReader();r.onload=async ev=>{const name=f.name.replace(/\.[^.]+$/,'');const lower=name.toLowerCase();let type='other';if(lower.includes('cv')||lower.includes('resume'))type='cv';else if(lower.includes('cover')||lower.includes('letter'))type='cover';else if(lower.includes('job')||lower.includes('desc'))type='jd';const obj={name,type,text:ev.target.result.slice(0,5000)};const fsId=await saveToFS('docs',obj);docs.unshift({fsId,...obj});renderDocs();renderGenDocSel();toast(`"${name}" uploaded`);};r.readAsText(f);});});
+</script>
+</body>
+</html>
